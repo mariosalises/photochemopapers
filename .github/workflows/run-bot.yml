@@ -2,8 +2,8 @@ name: Run PapersBot
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # todos los días a las 08:00 UTC
-  workflow_dispatch:      # permite ejecutarlo manualmente
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -18,7 +18,7 @@ jobs:
         with:
           name: posted-state
           path: .
-          if-no-artifact: warn
+        continue-on-error: true
 
       - name: Ensure posted.dat exists
         run: |
