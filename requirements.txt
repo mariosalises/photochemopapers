@@ -6,3 +6,5 @@ filetype
 Mastodon.py
 pyyaml
 tweepy
+requests
+twilio

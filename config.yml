@@ -17,3 +17,54 @@ shuffle_feeds: true
 blacklist:
   - "pericles.pericles-prod.literatumonline.com"
   - "www.onlinelibrary.wiley.com"
+
+# Keywords for filtering papers (grouped by category)
+keywords:
+  metals:
+    - ruthenium
+    - iridium
+    - osmium
+    - platinum
+    - rhenium
+  therapy:
+    - cancer
+    - anticancer
+    - cytotoxic
+    - phototoxic
+  photo:
+    - photodynamic
+    - photoactivated
+    - photosensitizer
+    - ROS
+    - singlet oxygen
+  chemistry:
+    - coordination complex
+    - metal complex
+    - organometallic
+
+# Active outputs (list of enabled publishers)
+outputs:
+  - console  # For testing, always enabled in dry-run
+  - telegram
+
+# Optional credentials/config per output
+# Uncomment and fill as needed
+# twitter:
+#   consumer_key: "x1F3s..."
+#   consumer_secret: "3VNg..."
+#   access_key: "7109..."
+#   access_secret: "AdnA..."
+telegram:
+  token: "8211723578:AAHhjYjnU0QXe0rd1rf3cAD03y0KUUnN-II"
+  chat_id: "-1003893494137"
+# whatsapp:
+#   account_sid: "your_twilio_sid"
+#   auth_token: "your_twilio_token"
+#   from_number: "+1234567890"
+#   to_group: "+1234567890"  # Or list of numbers
+# email:
+#   smtp_server: "smtp.gmail.com"
+#   smtp_port: 587
+#   username: "quicap.lab@gmail.com"
+#   password: "your_app_password"
+#   to: ["group@example.com"]
