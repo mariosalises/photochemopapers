@@ -17,18 +17,42 @@ class TelegramPublisher:
         self.chat_id = None
         self._init_telegram()
 
+    def _is_placeholder(self, value):
+        if not value or not isinstance(value, str):
+            return True
+        value = value.strip()
+        placeholders = [
+            "YOUR_TELEGRAM_TOKEN",
+            "YOUR_TELEGRAM_CHAT_ID",
+            "${TELEGRAM_TOKEN}",
+            "${TELEGRAM_CHAT_ID}",
+            "TELEGRAM_TOKEN",
+            "TELEGRAM_CHAT_ID",
+        ]
+        return any(value == placeholder for placeholder in placeholders)
+
     def _init_telegram(self):
         cred = self.config.get('telegram', {}) if isinstance(self.config, dict) else {}
-        token = cred.get('token') or os.environ.get('TELEGRAM_TOKEN')
-        chat_id = cred.get('chat_id') or os.environ.get('TELEGRAM_CHAT_ID')
+        token = os.environ.get('TELEGRAM_TOKEN')
+        chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+
+        if not token:
+            config_token = cred.get('token')
+            if config_token and not self._is_placeholder(config_token):
+                token = config_token
+
+        if not chat_id:
+            config_chat_id = cred.get('chat_id')
+            if config_chat_id and not self._is_placeholder(config_chat_id):
+                chat_id = config_chat_id
 
         if not token:
             raise ValueError(
-                "Telegram token is required. Set 'telegram.token' in config.yml or the environment variable TELEGRAM_TOKEN."
+                "Telegram token is required. Set TELEGRAM_TOKEN in the environment or a real 'telegram.token' in config.yml."
             )
         if not chat_id:
             raise ValueError(
-                "Telegram chat_id is required. Set 'telegram.chat_id' in config.yml or the environment variable TELEGRAM_CHAT_ID."
+                "Telegram chat_id is required. Set TELEGRAM_CHAT_ID in the environment or a real 'telegram.chat_id' in config.yml."
             )
 
         self.token = token
