@@ -62,10 +62,11 @@ class TelegramPublisher:
     def publish(self, message):
         if not self.token or not self.chat_id:
             return
-        # Clean HTML from all text fields
         title = self._clean_html(message['title'])
-        source = self._clean_source(message.get('source', ''))
-        summary = self._clean_summary(message.get('summary', ''))
+        raw_source = message.get('source', '')
+        raw_summary = message.get('summary', '')
+        source = self._clean_source(raw_source, raw_summary)
+        summary = self._clean_summary(raw_summary)
         tags = message.get('tags', [])
         link = message['link']
 
@@ -104,33 +105,55 @@ class TelegramPublisher:
             return "☀️"
         return "🧪"
 
-    def _clean_source(self, source):
+    def _clean_source(self, source, summary=''):
         """Clean and abbreviate source name."""
         if not source:
+            source = self._extract_source_from_summary(summary)
+        if not source:
             return ""
-        # Remove common RSS artifacts
         source = source.replace("Table of Contents", "").replace("TOC", "").strip()
-        # Extract journal name: assume before colon or dash
         import re
-        match = re.match(r'^([^:–]+)', source)
+        match = re.match(r'^([^:–,]+)', source)
         if match:
             source = match.group(1).strip()
-        # Limit length
+        source = re.sub(r'\b(Volume|Vol|Issue|Part|Publication date|Author\(s\)|DOI|EarlyView|Pages?)\b.*$', '', source, flags=re.IGNORECASE).strip()
+        source = source.rstrip('-,;:').strip()
         if len(source) > 50:
             source = source[:47] + "..."
         return source
 
-    def _clean_summary(self, summary):
-        """Clean summary, omit if poor quality."""
+    def _extract_source_from_summary(self, summary):
         if not summary:
             return ""
-        # Remove HTML
         summary = self._clean_html(summary)
-        # Check for poor quality: short, or contains metadata
+        import re
+        match = re.search(r'Source:\s*([^\n\r]+)', summary, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        match = re.search(r'Journal:\s*([^\n\r]+)', summary, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        return ""
+
+    def _clean_summary(self, summary):
+        """Clean summary, omit if poor quality or metadata only."""
+        if not summary:
+            return ""
+        summary = self._clean_html(summary)
+        summary = " ".join(summary.split())
+        import re
+        summary = re.sub(r'Publication date:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'Source:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'Journal:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'Author\(s\):\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'Volume\s*[^,;]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'Issue\s*[^,;]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'Part\s*[^,;]+', '', summary, flags=re.IGNORECASE)
+        summary = re.sub(r'DOI:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
+        summary = summary.strip(' ,;:-')
         bad_words = ['EarlyView', 'Online', 'Published', 'DOI', 'Copyright', 'Wiley']
-        if len(summary) < 50 or any(word in summary for word in bad_words):
-            return ""  # Omit
-        # Truncate to 150 chars
+        if len(summary) < 50 or any(word.lower() in summary.lower() for word in bad_words):
+            return ""
         if len(summary) > 150:
             summary = summary[:147] + "..."
         return summary
