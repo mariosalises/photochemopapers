@@ -55,8 +55,8 @@ outputs:
 #   access_key: "7109..."
 #   access_secret: "AdnA..."
 telegram:
-  token: "8211723578:AAHhjYjnU0QXe0rd1rf3cAD03y0KUUnN-II"
-  chat_id: "-1003893494137"
+  token: ${TELEGRAM_TOKEN}
+  chat_id: ${TELEGRAM_CHAT_ID}
 # whatsapp:
 #   account_sid: "your_twilio_sid"
 #   auth_token: "your_twilio_token"
