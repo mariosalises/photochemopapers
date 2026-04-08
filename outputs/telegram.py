@@ -5,6 +5,7 @@
 # Uses requests for synchronous Telegram API calls
 #
 
+import os
 import requests
 from bs4 import BeautifulSoup
 
@@ -14,17 +15,24 @@ class TelegramPublisher:
         self.config = config
         self.token = None
         self.chat_id = None
-        if 'telegram' in config:
-            self._init_telegram()
+        self._init_telegram()
 
     def _init_telegram(self):
-        cred = self.config['telegram']
-        if not cred.get('token'):
-            raise ValueError("Telegram token is required. Set 'telegram.token' in config.yml")
-        if not cred.get('chat_id'):
-            raise ValueError("Telegram chat_id is required. Set 'telegram.chat_id' in config.yml")
-        self.token = cred['token']
-        self.chat_id = cred['chat_id']
+        cred = self.config.get('telegram', {}) if isinstance(self.config, dict) else {}
+        token = cred.get('token') or os.environ.get('TELEGRAM_TOKEN')
+        chat_id = cred.get('chat_id') or os.environ.get('TELEGRAM_CHAT_ID')
+
+        if not token:
+            raise ValueError(
+                "Telegram token is required. Set 'telegram.token' in config.yml or the environment variable TELEGRAM_TOKEN."
+            )
+        if not chat_id:
+            raise ValueError(
+                "Telegram chat_id is required. Set 'telegram.chat_id' in config.yml or the environment variable TELEGRAM_CHAT_ID."
+            )
+
+        self.token = token
+        self.chat_id = chat_id
         print("Telegram initialized")
 
     def publish(self, message):
