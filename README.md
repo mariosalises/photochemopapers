@@ -1,40 +1,97 @@
-# PapersBot
+# PhotoChemoPapers
 
-PapersBot is an academic Twitter bot: it reads RSS feeds from journals and preprint archives, selects papers based on keyword matching, and tweets them.
+PhotoChemoPapers is an automated literature-monitoring bot focused on **organometallic and coordination chemistry applied to anticancer therapies**, especially **photoactivated approaches** such as **PDT** and **PACT**.
 
-I ([@fxcoudert](https://twitter.com/fxcoudert)) wrote PapersBot to operate my [@MOF_papers](https://twitter.com/MOF_papers) twitter bot, which tweets papers about metal–organic frameworks and related nanoporous materials.
+The project collects papers from RSS feeds, filters them using configurable domain-specific rules, assigns relevance scores, and distributes selected results through social and messaging platforms.
 
-PapersBot was inspired by (and borrows some code from) [feedr](https://github.com/housed/feedr).
+## Current scope
 
----
+PhotoChemoPapers is primarily focused on:
 
-## Requirements
+- Photodynamic therapy (PDT)
+- Photoactivated chemotherapy (PACT)
+- Metal-based anticancer agents
+- Photoactive coordination compounds
+- Related photochemical and bioinorganic approaches
 
-Python 3 and the following modules: [pyyaml](https://pyyaml.org/), [beautifulsoup4](https://pypi.org/project/beautifulsoup4/), [feedparser](https://github.com/kurtmckee/feedparser), [tweepy](https://github.com/tweepy/tweepy).
+The filtering is intentionally broad enough to avoid missing relevant literature, so some off-topic papers may occasionally appear.
 
-If you have Python 3 installed, you can install those modules with  `pip install pyyaml bs4 feedparser tweepy`. On some systems (like Debian), `pip` may actually be called `pip3` for Python 3.
+## Features
 
-## Setup
+- RSS-based monitoring of journals and other scientific sources
+- Configurable keyword filtering
+- Rule-based scoring system to prioritize relevance
+- Automatic tagging
+- Telegram integration
+- Bluesky integration
+- GitHub Actions automation
+- Extensible publisher/output architecture
 
-In order to run PapersBot, you need to do the following:
-- Create a file `credentials.yml` which will contain your Twitter app credentials, with four lines:
-```
-CONSUMER_KEY: "x1F3s..."
-CONSUMER_SECRET: "3VNg..."
-ACCESS_KEY: "7109..."
-ACCESS_SECRET: "AdnA..."
-```
-If you do not know how to get your Twitter credentials, follow [steps #1 and #2 in this tutorial](https://www.digitalocean.com/community/tutorials/how-to-create-a-twitter-app) to register your app with Twitter and get credentials.
-- Adjust the file `feeds.txt` which contains the list of RSS feeds you want to crawl. Lines starting with `#` are ignored.
-- Inside the code, adjust the [regular expression](https://en.wikipedia.org/wiki/Regular_expression) that selects the papers of interest
-- Some extra parameters can be tweaked in configuration file `config.yml`.
+## How it works
 
-## How to run
+1. The bot reads RSS feeds from configured sources.
+2. Papers are filtered using chemistry- and therapy-related keywords.
+3. A rule-based scoring layer prioritizes papers according to positive and negative signals.
+4. Selected papers are formatted and sent to the enabled outputs.
 
-PapersBot tracks in a file named `posted.dat` (which it will create) the papers that have already been tweeted. The first time you run it, if there is no `posted.dat` from a prior run, PapersBot can thus post **a lot** of papers. If you want to avoid this, especially on the first run or if it hasn't been run for a long time, use the `--do-not-tweet` option.
+## Scoring philosophy
 
-`papersbot.py --do-not-tweet` will list the papers it _would_ tweet, without actually tweeting. But papers will still be recorded as tweeted in the `posted.dat` file.
+The bot does not rely on generative AI. Instead, it uses transparent, editable rules.
 
-## Other features
+Positive signals may include:
 
-- Running `papersbot.py --top-tweets` will give you a list of the 5 top tweets, from the bot's 200 latest tweets. It sorts tweets by adding number of retweets and likes.
+- PDT / PACT / photodynamic / photoactivated
+- metal names such as ruthenium, iridium, osmium, platinum, rhenium
+- terms like cytotoxicity, phototoxicity, ROS, singlet oxygen
+- biomedical context such as in vitro, in vivo, apoptosis, cell lines
+
+Negative signals may include:
+
+- photocatalysis
+- environmental remediation
+- hydrogen evolution
+- water splitting
+- CO2 reduction
+- surface-heavy materials-science contexts when not clearly therapeutic
+
+This makes the system suitable for semi-curated literature surveillance without requiring paid AI services.
+
+## Outputs
+
+Currently supported or prepared outputs include:
+
+- Telegram
+- Bluesky
+- Email/newsletter (planned or partial)
+- Other channels can be added through the output/publisher architecture
+
+## Automation
+
+The bot is designed to run automatically through GitHub Actions, so it does not depend on a local computer being switched on.
+
+## Limitations
+
+- RSS metadata quality varies across publishers
+- Some papers outside the intended scope may still pass the filter
+- Some relevant papers may be missed if the feed metadata is poor
+- “Curated” in the strongest sense still requires human review for a final newsletter
+
+## Project status
+
+This project is under active refinement. Current priorities include:
+
+- improving relevance scoring
+- reducing false positives from photocatalysis and surface/materials papers
+- improving formatting and chemical notation
+- developing a semi-curated newsletter workflow
+
+## Credits
+
+This project is **based on PapersBot**, originally developed by **François-Xavier Coudert**.
+
+It is also **inspired by the idea behind “Photocatalysis Papers” from the ESC Group**.
+
+## License
+
+This project builds upon software released under the **MIT License**.  
+Please keep the original license and attribution when reusing or adapting the code.

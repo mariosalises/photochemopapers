@@ -8,23 +8,12 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
-
-      - name: Restore posted.dat
-        uses: actions/download-artifact@v5
-        with:
-          name: posted-state
-          path: .
-        continue-on-error: true
-
-      - name: Ensure posted.dat exists
-        run: |
-          if [ ! -f posted.dat ]; then
-            touch posted.dat
-          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -42,9 +31,23 @@ jobs:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
         run: python papersbot.py
 
-      - name: Upload posted.dat artifact
+      - name: Persist posted.dat
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: posted-state
-          path: posted.dat
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          if [ ! -f posted.dat ]; then
+            touch posted.dat
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add posted.dat
+
+          if git diff --cached --quiet; then
+            echo "No posted.dat changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update posted.dat"
+          git pull --rebase origin "$branch"
+          git push origin HEAD:"$branch"
