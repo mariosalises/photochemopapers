@@ -225,7 +225,7 @@ scoring:
 outputs:
   - console  # For testing, always enabled in dry-run
   - telegram
-  # - bluesky
+  - bluesky
 
 newsletter:
   url: ${NEWSLETTER_URL}
