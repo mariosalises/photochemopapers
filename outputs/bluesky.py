@@ -8,7 +8,7 @@
 import os
 from pathlib import Path
 
-from atproto import Client, SessionEvent, models
+from atproto import Client, SessionEvent, client_utils, models
 
 
 class BlueskyPublisher:
@@ -73,58 +73,30 @@ class BlueskyPublisher:
 
     def _build_post_text(self, message):
         title = self._clean_text(message.get("title", ""))
-        tags = self._select_tags(message)
         link = message.get("link", "").strip()
+        tags = message.get("tags", []) or []
+        header = self._get_header(tags)
 
-        tag_line = ""
-        if tags:
-            tag_line = "Tags: " + ", ".join(tags)
-
-        lines = [line for line in [title, tag_line, link] if line]
-        text = "\n".join(lines)
-        if len(text) <= self.MAX_POST_LENGTH:
-            return text
-
-        reserved = len(link)
-        if tag_line:
-            reserved += len(tag_line) + 1
-        if reserved:
-            reserved += 1
-
+        reserved = len(link) + len(header) + 4
         max_title_length = max(40, self.MAX_POST_LENGTH - reserved)
         shortened_title = self._truncate(title, max_title_length)
-        lines = [line for line in [shortened_title, tag_line, link] if line]
-        return "\n".join(lines)
 
-    def _select_tags(self, message):
-        tags = message.get("tags", []) or []
-        score_reasons = message.get("score_reasons", []) or []
-
-        selected = []
-        for tag in tags:
-            clean_tag = self._clean_reason_label(tag)
-            if clean_tag and clean_tag not in selected:
-                selected.append(clean_tag)
-            if len(selected) >= 2:
-                return selected
-
-        for reason in score_reasons:
-            clean_reason = self._clean_reason_label(reason)
-            if clean_reason and not clean_reason.startswith("-") and clean_reason not in selected:
-                selected.append(clean_reason)
-            if len(selected) >= 2:
-                break
-        return selected[:2]
-
-    def _clean_reason_label(self, value):
-        if not value:
-            return ""
-        return str(value).lstrip("+").strip()
+        builder = client_utils.TextBuilder()
+        builder.text(f"{header}\n{shortened_title}\n\n")
+        if link:
+            # Use a rich-text link facet while keeping the real URL visible for reliability.
+            builder.link(link, link)
+        return builder
 
     def _clean_text(self, text):
         if not text:
             return ""
         return " ".join(str(text).split())
+
+    def _get_header(self, tags):
+        if any(tag in ["PDT", "PACT", "photodynamic", "photoactivated"] for tag in tags):
+            return "☀️"
+        return "🧪"
 
     def _truncate(self, text, max_length):
         if len(text) <= max_length:

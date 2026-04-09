@@ -74,19 +74,11 @@ class TelegramPublisher:
 
         header = self._get_header(tags)
         lines = [f"{header} {title}"]
-        score = message.get("score")
-        reasons = message.get("score_reasons", [])
-        if score is not None:
-            compact_reasons = ", ".join(reasons[:4])
-            if compact_reasons:
-                lines.append(f"Score: {score} | {compact_reasons}")
-            else:
-                lines.append(f"Score: {score}")
         if source:
-            lines.append(f"Source: {source}")
+            lines.append(f"📖 {source}")
         if summary:
-            lines.append(f"Summary: {summary}")
-        lines.append(f"Link: {link}")
+            lines.append(f"📝 {summary}")
+        lines.append(f"🔗 {link}")
         self.publish_text("\n".join(lines))
 
     def publish_text(self, text):
@@ -114,8 +106,8 @@ class TelegramPublisher:
 
     def _get_header(self, tags):
         if any(tag in ["PDT", "PACT", "photodynamic", "photoactivated"] for tag in tags):
-            return "PDT/PACT"
-        return "Paper"
+            return "☀️"
+        return "🧪"
 
     def _clean_source(self, source, summary=""):
         if not source:
