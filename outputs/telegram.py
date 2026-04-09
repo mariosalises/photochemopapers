@@ -6,6 +6,7 @@
 #
 
 import os
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -32,17 +33,17 @@ class TelegramPublisher:
         return any(value == placeholder for placeholder in placeholders)
 
     def _init_telegram(self):
-        cred = self.config.get('telegram', {}) if isinstance(self.config, dict) else {}
-        token = os.environ.get('TELEGRAM_TOKEN')
-        chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+        cred = self.config.get("telegram", {}) if isinstance(self.config, dict) else {}
+        token = os.environ.get("TELEGRAM_TOKEN")
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
         if not token:
-            config_token = cred.get('token')
+            config_token = cred.get("token")
             if config_token and not self._is_placeholder(config_token):
                 token = config_token
 
         if not chat_id:
-            config_chat_id = cred.get('chat_id')
+            config_chat_id = cred.get("chat_id")
             if config_chat_id and not self._is_placeholder(config_chat_id):
                 chat_id = config_chat_id
 
@@ -62,28 +63,41 @@ class TelegramPublisher:
     def publish(self, message):
         if not self.token or not self.chat_id:
             return
-        title = self._clean_html(message['title'])
-        raw_source = message.get('source', '')
-        raw_summary = message.get('summary', '')
+
+        title = self._clean_html(message["title"])
+        raw_source = message.get("source", "")
+        raw_summary = message.get("summary", "")
         source = self._clean_source(raw_source, raw_summary)
         summary = self._clean_summary(raw_summary)
-        tags = message.get('tags', [])
-        link = message['link']
+        tags = message.get("tags", [])
+        link = message["link"]
 
-        # Header with emoji
         header = self._get_header(tags)
-        text = f"{header} {title}\n"
+        lines = [f"{header} {title}"]
+        score = message.get("score")
+        reasons = message.get("score_reasons", [])
+        if score is not None:
+            compact_reasons = ", ".join(reasons[:4])
+            if compact_reasons:
+                lines.append(f"Score: {score} | {compact_reasons}")
+            else:
+                lines.append(f"Score: {score}")
         if source:
-            text += f"📖 {source}\n"
+            lines.append(f"Source: {source}")
         if summary:
-            text += f"📝 {summary}\n"
-        text += f"🔗 {link}"
+            lines.append(f"Summary: {summary}")
+        lines.append(f"Link: {link}")
+        self.publish_text("\n".join(lines))
+
+    def publish_text(self, text):
+        if not self.token or not self.chat_id:
+            return
 
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         data = {
-            'chat_id': self.chat_id,
-            'text': text,
-            'parse_mode': None  # Plain text
+            "chat_id": self.chat_id,
+            "text": text,
+            "parse_mode": None,
         }
         try:
             response = requests.post(url, data=data, timeout=10)
@@ -94,30 +108,33 @@ class TelegramPublisher:
             raise
 
     def _clean_html(self, text):
-        """Remove all HTML tags from text."""
         if not text:
             return ""
         return BeautifulSoup(text, "html.parser").get_text()
 
     def _get_header(self, tags):
-        """Get thematic emoji based on tags."""
-        if any(tag in ['PDT', 'PACT', 'photodynamic', 'photoactivated'] for tag in tags):
-            return "☀️"
-        return "🧪"
+        if any(tag in ["PDT", "PACT", "photodynamic", "photoactivated"] for tag in tags):
+            return "PDT/PACT"
+        return "Paper"
 
-    def _clean_source(self, source, summary=''):
-        """Clean and abbreviate source name."""
+    def _clean_source(self, source, summary=""):
         if not source:
             source = self._extract_source_from_summary(summary)
         if not source:
             return ""
         source = source.replace("Table of Contents", "").replace("TOC", "").strip()
         import re
-        match = re.match(r'^([^:–,]+)', source)
+
+        match = re.match(r"^([^:–,]+)", source)
         if match:
             source = match.group(1).strip()
-        source = re.sub(r'\b(Volume|Vol|Issue|Part|Publication date|Author\(s\)|DOI|EarlyView|Pages?)\b.*$', '', source, flags=re.IGNORECASE).strip()
-        source = source.rstrip('-,;:').strip()
+        source = re.sub(
+            r"\b(Volume|Vol|Issue|Part|Publication date|Author\(s\)|DOI|EarlyView|Pages?)\b.*$",
+            "",
+            source,
+            flags=re.IGNORECASE,
+        ).strip()
+        source = source.rstrip("-,;:").strip()
         if len(source) > 50:
             source = source[:47] + "..."
         return source
@@ -127,31 +144,32 @@ class TelegramPublisher:
             return ""
         summary = self._clean_html(summary)
         import re
-        match = re.search(r'Source:\s*([^\n\r]+)', summary, flags=re.IGNORECASE)
+
+        match = re.search(r"Source:\s*([^\n\r]+)", summary, flags=re.IGNORECASE)
         if match:
             return match.group(1).strip()
-        match = re.search(r'Journal:\s*([^\n\r]+)', summary, flags=re.IGNORECASE)
+        match = re.search(r"Journal:\s*([^\n\r]+)", summary, flags=re.IGNORECASE)
         if match:
             return match.group(1).strip()
         return ""
 
     def _clean_summary(self, summary):
-        """Clean summary, omit if poor quality or metadata only."""
         if not summary:
             return ""
         summary = self._clean_html(summary)
         summary = " ".join(summary.split())
         import re
-        summary = re.sub(r'Publication date:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'Source:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'Journal:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'Author\(s\):\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'Volume\s*[^,;]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'Issue\s*[^,;]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'Part\s*[^,;]+', '', summary, flags=re.IGNORECASE)
-        summary = re.sub(r'DOI:\s*[^\n\r]+', '', summary, flags=re.IGNORECASE)
-        summary = summary.strip(' ,;:-')
-        bad_words = ['EarlyView', 'Online', 'Published', 'DOI', 'Copyright', 'Wiley']
+
+        summary = re.sub(r"Publication date:\s*[^\n\r]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"Source:\s*[^\n\r]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"Journal:\s*[^\n\r]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"Author\(s\):\s*[^\n\r]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"Volume\s*[^,;]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"Issue\s*[^,;]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"Part\s*[^,;]+", "", summary, flags=re.IGNORECASE)
+        summary = re.sub(r"DOI:\s*[^\n\r]+", "", summary, flags=re.IGNORECASE)
+        summary = summary.strip(" ,;:-")
+        bad_words = ["EarlyView", "Online", "Published", "DOI", "Copyright", "Wiley"]
         if len(summary) < 50 or any(word.lower() in summary.lower() for word in bad_words):
             return ""
         if len(summary) > 150:

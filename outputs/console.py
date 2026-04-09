@@ -13,6 +13,9 @@ class ConsolePublisher:
         """Print message to console."""
         print("=== PAPER ALERT ===")
         print(f"Title: {message['title']}")
+        print(f"Score: {message.get('score', 0)}")
+        if message.get('score_reasons'):
+            print(f"Reasons: {', '.join(message['score_reasons'])}")
         if message.get('source'):
             print(f"Source: {message['source']}")
         if message.get('summary'):

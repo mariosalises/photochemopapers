@@ -1,47 +1,3 @@
-# Maximum number of papers to publish in a given run
-# If this value is zero, all new papers matching the criteria are published
-# Default value: 0
-throttle: 10
-
-# Time (in seconds) to wait between two tweets
-# Default value: 5
-wait_time: 30
-
-# Should the feed list be randomly shuffled?
-# Avoids tweeting always the same journals first/last
-# Default value: true
-shuffle_feeds: true
-
-# URLs matching these regular expressions will not be tweeted
-# Used e.g. for Wiley journals that republish old content with new URLs
-blacklist:
-  - "pericles.pericles-prod.literatumonline.com"
-  - "www.onlinelibrary.wiley.com"
-
-# Keywords for filtering papers (grouped by category)
-keywords:
-  metals:
-    - ruthenium
-    - iridium
-    - osmium
-    - platinum
-    - rhenium
-  therapy:
-    - cancer
-    - anticancer
-    - cytotoxic
-    - phototoxic
-  photo:
-    - photodynamic
-    - photoactivated
-    - photosensitizer
-    - ROS
-    - singlet oxygen
-  chemistry:
-    - coordination complex
-    - metal complex
-    - organometallic
-
 scoring:
   direct_exclusions:
     - "Author Correction"
@@ -70,9 +26,7 @@ scoring:
   groups:
     - name: photo_core
       weight: 3
-      terms:
-        - PDT
-        - PACT
+      terms: [PDT, PACT]
       label_map:
         PDT: PDT
         PACT: PACT
@@ -176,8 +130,7 @@ scoring:
         dye degradation: dye degradation
     - name: surface_negative
       weight: -2
-      requires_absence_of:
-        - therapy_context
+      requires_absence_of: [therapy_context]
       terms:
         - surface
         - surfaces
@@ -208,8 +161,7 @@ scoring:
         thin film: thin film
     - name: weak_negative
       weight: -1
-      requires_absence_of:
-        - therapy_context
+      requires_absence_of: [therapy_context]
       terms:
         - sensor
         - detection
@@ -220,38 +172,3 @@ scoring:
         detection: detection
         imaging: imaging
         environmental: environmental
-
-# Active outputs (list of enabled publishers)
-outputs:
-  - console  # For testing, always enabled in dry-run
-  - telegram
-  # - bluesky
-
-newsletter:
-  url: ${NEWSLETTER_URL}
-  cta: "Want the weekly roundup in your inbox?"
-  closing: "Subscribe to the newsletter here:"
-
-# Optional credentials/config per output
-# Uncomment and fill as needed
-# twitter:
-#   consumer_key: "x1F3s..."
-#   consumer_secret: "3VNg..."
-#   access_key: "7109..."
-#   access_secret: "AdnA..."
-telegram:
-  token: ${TELEGRAM_TOKEN}
-  chat_id: ${TELEGRAM_CHAT_ID}
-bluesky:
-  session_path: ".bluesky_session"
-# whatsapp:
-#   account_sid: "your_twilio_sid"
-#   auth_token: "your_twilio_token"
-#   from_number: "+1234567890"
-#   to_group: "+1234567890"  # Or list of numbers
-# email:
-#   smtp_server: "smtp.gmail.com"
-#   smtp_port: 587
-#   username: "quicap.lab@gmail.com"
-#   password: "your_app_password"
-#   to: ["group@example.com"]
