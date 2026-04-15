@@ -82,7 +82,7 @@ class BlueskyPublisher:
         shortened_title = self._truncate(title, max_title_length)
 
         builder = client_utils.TextBuilder()
-        builder.text(f"{header}\n{shortened_title}\n\n")
+        builder.text(f"{header} {shortened_title}\n\n")
         if link:
             # Use a rich-text link facet while keeping the real URL visible for reliability.
             builder.link(link, link)
