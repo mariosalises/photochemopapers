@@ -232,6 +232,9 @@ newsletter:
   cta: "Want the weekly roundup in your inbox?"
   closing: "Subscribe to the newsletter here:"
 
+weekly_digest:
+  top_n: 10
+
 # Optional credentials/config per output
 # Uncomment and fill as needed
 # twitter:

@@ -46,29 +46,30 @@ class PapersBot:
         except OSError:
             config = {}
         config = config or {}
+        self.config = config
 
-        self.throttle = 1 if (self.test_telegram or self.test_bluesky) else config.get("throttle", 0)
-        self.wait_time = config.get("wait_time", 5)
-        self.shuffle_feeds = config.get("shuffle_feeds", True)
-        self.blacklist = config.get("blacklist", [])
+        self.throttle = 1 if (self.test_telegram or self.test_bluesky) else self.config.get("throttle", 0)
+        self.wait_time = self.config.get("wait_time", 5)
+        self.shuffle_feeds = self.config.get("shuffle_feeds", True)
+        self.blacklist = self.config.get("blacklist", [])
         self.blacklist = [__import__('re').compile(s) for s in self.blacklist]
-        self.scoring_config = config.get("scoring", DEFAULT_SCORING_CONFIG)
+        self.scoring_config = self.config.get("scoring", DEFAULT_SCORING_CONFIG)
 
         # Initialize modules
         self.reader = RSSReader(self.feeds)
-        self.filter = KeywordFilter(config.get("keywords", []))
+        self.filter = KeywordFilter(self.config.get("keywords", []))
         self.scorer = RuleBasedScorer(self.scoring_config)
         self.deduplicator = Deduplicator()
 
         # Initialize publishers
-        active_outputs = outputs or config.get("outputs", ["console"])
+        active_outputs = outputs or self.config.get("outputs", ["console"])
         if self.dry_run:
             active_outputs = ["console"]
         elif self.test_telegram:
             active_outputs = ["telegram"]  # Only Telegram for test
         elif self.test_bluesky:
             active_outputs = ["bluesky"]  # Only Bluesky for test
-        self.publishers = build_publishers(active_outputs, config)
+        self.publishers = build_publishers(active_outputs, self.config)
 
         # Shuffle feeds
         if self.shuffle_feeds:
@@ -77,31 +78,47 @@ class PapersBot:
         print(f"PapersBot initialized. Feeds: {len(self.feeds)}, Outputs: {[type(p).__name__ for p in self.publishers]}")
 
     def run(self):
-        entries = self.reader.get_entries()
-        n_seen = 0
+        messages = self.get_candidate_messages(exclude_posted=True)
+        n_seen = len(messages)
         n_published = 0
 
-        for entry in entries:
-            if self.filter.matches(entry):
-                if self.scorer.is_directly_excluded(entry):
-                    continue
-                if self._is_blacklisted(entry.title):
-                    continue
-                n_seen += 1
-                entry_id = entry.id if "id" in entry else entry.link
-                if not self.deduplicator.is_posted(entry_id):
-                    message = self._build_message(entry)
-                    self._publish(message)
-                    if not self.test_telegram and not self.test_bluesky:  # Don't mark as posted in test mode
-                        self.deduplicator.mark_posted(entry_id)
-                    n_published += 1
-                    if self.throttle > 0 and n_published >= self.throttle:
-                        break
-                    time.sleep(self.wait_time)
+        for message in messages:
+            self._publish(message)
+            if not self.test_telegram and not self.test_bluesky:  # Don't mark as posted in test mode
+                self.deduplicator.mark_posted(message["entry_id"])
+            n_published += 1
+            if self.throttle > 0 and n_published >= self.throttle:
+                break
+            time.sleep(self.wait_time)
 
         print(f"Relevant papers: {n_seen}, Published: {n_published}")
 
+    def get_candidate_messages(self, exclude_posted=True):
+        entries = self.reader.get_entries()
+        messages = []
+        seen_entry_ids = set()
+
+        for entry in entries:
+            if not self.filter.matches(entry):
+                continue
+            if self.scorer.is_directly_excluded(entry):
+                continue
+            if self._is_blacklisted(entry.title):
+                continue
+
+            entry_id = entry.id if "id" in entry else entry.link
+            if entry_id in seen_entry_ids:
+                continue
+            if exclude_posted and self.deduplicator.is_posted(entry_id):
+                continue
+
+            seen_entry_ids.add(entry_id)
+            messages.append(self._build_message(entry))
+
+        return messages
+
     def _build_message(self, entry):
+        entry_id = entry.id if "id" in entry else entry.link
         title = clean_text(entry.title)
         link = entry.id if entry.id.startswith("http") else entry.link
         summary = clean_text(entry.get("summary", ""))[:200] if "summary" in entry else ""
@@ -114,6 +131,7 @@ class PapersBot:
             "summary": summary,
             "tags": tags,
             "link": link,
+            "entry_id": entry_id,
             "score": score_data["score"],
             "score_reasons": score_data["reasons"],
             "score_contexts": score_data["contexts"],
