@@ -62,7 +62,7 @@ class TelegramPublisher:
 
     def publish(self, message):
         if not self.token or not self.chat_id:
-            return
+            return None
 
         title = self._clean_html(message["title"])
         raw_source = message.get("source", "")
@@ -79,11 +79,11 @@ class TelegramPublisher:
         if summary:
             lines.append(f"📝 {summary}")
         lines.append(f"🔗 {link}")
-        self.publish_text("\n".join(lines))
+        return self.publish_text("\n".join(lines))
 
     def publish_text(self, text):
         if not self.token or not self.chat_id:
-            return
+            return None
 
         url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         data = {
@@ -94,10 +94,31 @@ class TelegramPublisher:
         try:
             response = requests.post(url, data=data, timeout=10)
             response.raise_for_status()
+            payload = response.json()
             print("Telegram message sent successfully")
+            return payload.get("result", {})
         except requests.exceptions.RequestException as e:
             print(f"Telegram send failed: {e}")
             raise
+
+    def pin_message(self, message_id, disable_notification=True):
+        if not self.token or not self.chat_id or message_id is None:
+            return False
+
+        url = f"https://api.telegram.org/bot{self.token}/pinChatMessage"
+        data = {
+            "chat_id": self.chat_id,
+            "message_id": message_id,
+            "disable_notification": disable_notification,
+        }
+        try:
+            response = requests.post(url, data=data, timeout=10)
+            response.raise_for_status()
+            print(f"Telegram message pinned successfully: {message_id}")
+            return True
+        except requests.exceptions.RequestException as e:
+            print(f"Warning: Telegram pin failed for message {message_id}: {e}")
+            return False
 
     def _clean_html(self, text):
         if not text:

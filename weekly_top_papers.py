@@ -54,6 +54,8 @@ def main():
     config = bot.config
     weekly_config = config.get("weekly_digest", {}) if isinstance(config, dict) else {}
     top_n = weekly_config.get("top_n", 10)
+    telegram_config = config.get("telegram", {}) if isinstance(config, dict) else {}
+    pin_weekly_summary = telegram_config.get("pin_weekly_summary", False)
 
     messages = bot.get_candidate_messages(exclude_posted=False)
     ranked_messages = bot.sort_messages_by_score(messages)[:top_n]
@@ -63,7 +65,10 @@ def main():
         return
 
     publisher = TelegramPublisher(config)
-    publisher.publish_text(build_digest_text(ranked_messages, top_n))
+    result = publisher.publish_text(build_digest_text(ranked_messages, top_n))
+    message_id = result.get("message_id") if isinstance(result, dict) else None
+    if pin_weekly_summary and message_id is not None:
+        publisher.pin_message(message_id)
 
 
 if __name__ == "__main__":
