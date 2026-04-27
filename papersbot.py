@@ -83,13 +83,14 @@ class PapersBot:
         n_published = 0
 
         for message in messages:
-            self._publish(message)
-            if not self.test_telegram and not self.test_bluesky:  # Don't mark as posted in test mode
+            published = self._publish(message)
+            if published and not self.test_telegram and not self.test_bluesky:  # Don't mark as posted in test mode
                 self.deduplicator.mark_posted(message["entry_id"])
-            n_published += 1
-            if self.throttle > 0 and n_published >= self.throttle:
-                break
-            time.sleep(self.wait_time)
+            if published:
+                n_published += 1
+                if self.throttle > 0 and n_published >= self.throttle:
+                    break
+                time.sleep(self.wait_time)
 
         print(f"Relevant papers: {n_seen}, Published: {n_published}")
 
@@ -143,8 +144,14 @@ class PapersBot:
         return any(pattern.search(title) for pattern in self.blacklist)
 
     def _publish(self, message):
+        delivered = False
         for publisher in self.publishers:
-            publisher.publish(message)
+            try:
+                publisher.publish(message)
+                delivered = True
+            except Exception as exc:
+                print(f"Publisher {type(publisher).__name__} failed: {exc}")
+        return delivered
 
     def sort_messages_by_score(self, messages):
         return self.scorer.sort_messages(messages)

@@ -29,5 +29,8 @@ def build_publishers(active_outputs, config):
         if publisher_cls is None:
             print(f"Unknown output '{output_name}', skipping")
             continue
-        publishers.append(publisher_cls(config))
+        try:
+            publishers.append(publisher_cls(config))
+        except Exception as exc:
+            print(f"Failed to initialize output '{output_name}': {exc}")
     return publishers
