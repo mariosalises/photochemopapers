@@ -9,6 +9,7 @@ import os
 import random
 import sys
 import time
+from datetime import datetime, timezone
 import yaml
 
 from sources.rss_reader import RSSReader
@@ -30,6 +31,14 @@ def clean_text(s):
     s = s.replace("[ASAP]", "").replace("\x0A", "")
     s = re.sub(r"\(arXiv:.+\)", "", s)
     return re.sub(r"\s\s+", " ", s).strip()
+
+
+def extract_entry_datetime(entry):
+    for attr_name in ("published_parsed", "updated_parsed"):
+        parsed_value = getattr(entry, attr_name, None)
+        if parsed_value:
+            return datetime(*parsed_value[:6], tzinfo=timezone.utc)
+    return None
 
 
 class PapersBot:
@@ -126,6 +135,7 @@ class PapersBot:
         source = getattr(entry, 'source', {}).get('title', '') if hasattr(entry, 'source') else ''
         tags = self.filter.get_tags(entry)
         score_data = self.scorer.score_entry(entry)
+        published_at = extract_entry_datetime(entry)
         return {
             "title": title,
             "source": source,
@@ -133,6 +143,7 @@ class PapersBot:
             "tags": tags,
             "link": link,
             "entry_id": entry_id,
+            "published_at": published_at.isoformat() if published_at else None,
             "score": score_data["score"],
             "score_reasons": score_data["reasons"],
             "score_contexts": score_data["contexts"],

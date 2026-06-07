@@ -1,9 +1,9 @@
-name: Weekly Top Papers Digest
+name: Daily Top Papers Digest
 
 on:
   schedule:
-    - cron: '0 18 * * 4'
-    - cron: '0 19 * * 4'
+    - cron: '0 18 * * *'
+    - cron: '0 19 * * *'
   workflow_dispatch:
 
 jobs:
@@ -22,13 +22,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Send weekly top papers digest
+      - name: Send daily top papers digest
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python telegram_digest.py --cadence weekly --force
+            python telegram_digest.py --cadence daily --force
           else
-            python telegram_digest.py --cadence weekly
+            python telegram_digest.py --cadence daily
           fi

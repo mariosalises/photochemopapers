@@ -235,6 +235,9 @@ newsletter:
 weekly_digest:
   top_n: 10
 
+daily_digest:
+  top_n: 5
+
 # Optional credentials/config per output
 # Uncomment and fill as needed
 # twitter:
